@@ -1,0 +1,41 @@
+#!/bin/bash
+
+MEM=$(grep MemTotal /proc/meminfo | awk '{print $2}')
+
+WM="32MB"
+
+if [ "$MEM" -lt 2097152 ]; then
+  SB="$( printf %.0f $(("$MEM" / 5125)) )MB"
+elif [ "$MEM" -lt 67108864 ]; then
+  SB="$( printf %.0f $(("$MEM" / 4096)) )MB"
+else
+  SB="16GB"
+fi
+
+MWM="$( printf %.0f $(("$MEM" / 10240)) )"
+if [ "$MWM" -gt 1048576 ]; then
+  MWM="1GB"
+else
+  MWM="${MWM}MB"
+fi
+
+ECS="$( printf %.0f $(("$MEM" * 3 / 4096 )) )MB"
+
+if [[ $(hostname -d) =~ .*\.amazonaws\.com ]]; then
+  RPC="random_page_cost = 1.1"
+else
+  RPC="random_page_cost = 3.0"
+fi
+
+cat << EOF
+shared_buffers = $SB
+work_mem = $WM
+maintenance_work_mem = $MWM
+effective_cache_size = $ECS
+wal_buffers = 16MB
+checkpoint_completion_target = 0.9
+checkpoint_timeout = 10m
+min_wal_size = 512MB
+max_wal_size = 2GB
+$RPC
+EOF
