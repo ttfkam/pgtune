@@ -1,9 +1,12 @@
 #!/bin/bash
 
+# Total RAM
 MEM=$(grep MemTotal /proc/meminfo | awk '{print $2}')
 
+# Work memory
 WM="32MB"
 
+# Shared buffers is 20% of RAM up to 2GB, 25% up to 64GB, and a 16GB ceiling
 if [ "$MEM" -lt 2097152 ]; then
   SB="$( printf %.0f $(("$MEM" / 5125)) )MB"
 elif [ "$MEM" -lt 67108864 ]; then
@@ -12,6 +15,7 @@ else
   SB="16GB"
 fi
 
+# Maintenance work memory is the lesser of 1GB or 10% of total RAM
 MWM="$( printf %.0f $(("$MEM" / 10240)) )"
 if [ "$MWM" -gt 1048576 ]; then
   MWM="1GB"
@@ -19,9 +23,11 @@ else
   MWM="${MWM}MB"
 fi
 
+# Effective cache size is set to 75% of total memory (file cache)
 ECS="$( printf %.0f $(("$MEM" * 3 / 4096 )) )MB"
 
-if [[ $(hostname -d) =~ .*\.amazonaws\.com ]]; then
+# If it's an AWS instance…
+if [ -f /sys/hypervisor/uuid ] && [ `head -c 3 /sys/hypervisor/uuid` == ec2 ]; then
   RPC="random_page_cost = 1.1"
 else
   RPC="random_page_cost = 3.0"
